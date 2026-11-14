@@ -340,7 +340,9 @@ internal static class SamsungTvRootAgent
     {
         ProcessStartInfo start = new ProcessStartInfo();
         start.FileName = "/usr/bin/setsid";
-        start.Arguments = "/bin/sh -c " + QuoteArgument(command);
+        start.ArgumentList.Add("/bin/sh");
+        start.ArgumentList.Add("-c");
+        start.ArgumentList.Add(command);
         start.UseShellExecute = false;
         start.CreateNoWindow = true;
         start.RedirectStandardOutput = true;
@@ -596,11 +598,6 @@ internal static class SamsungTvRootAgent
         {
             return "unavailable:" + exception.GetType().Name;
         }
-    }
-
-    private static string QuoteArgument(string value)
-    {
-        return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
     }
 
     private static string HexEncode(byte[] bytes)

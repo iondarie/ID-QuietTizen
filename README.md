@@ -94,7 +94,7 @@ under ignored paths.
 
 ## Development
 
-Host tools use Python 3.12+ and the standard library. Raster artwork conversion
+Host tools use Python 3.9+ and the standard library (CI tests on 3.12). Raster artwork conversion
 optionally uses Pillow. Source builds use the .NET 6 SDK to match the tested
 TV; it is an older SDK and should be isolated from unrelated projects.
 Install Samsung's SDB separately.

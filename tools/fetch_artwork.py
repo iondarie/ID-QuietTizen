@@ -56,7 +56,7 @@ def convert(data, entry):
         data = matches[0].encode()
     if suffix == ".svg":
         text = data.decode("utf-8")
-        if re.search(r"<!DOCTYPE|<!ENTITY|<script|<foreignObject|\bon\w+\s*=|(?:href|url)\s*[=(]\s*['\"]?(?:https?:|//|data:)", text, re.I):
+        if re.search(r"<!DOCTYPE|<!ENTITY|<script|<foreignObject|<style|@import|\bon\w+\s*=|(?:href|url)\s*[=(]\s*['\"]?(?:https?:|//|data:)", text, re.I):
             raise ValueError("SVG contains active content or external resources.")
         # Inline SVGs copied from an HTML page can omit the namespace.
         root = ET.fromstring(text)
@@ -79,9 +79,9 @@ def convert(data, entry):
     except ImportError as error:
         raise ValueError("Install Pillow in a local venv to validate and convert raster artwork.") from error
     with Image.open(io.BytesIO(data)) as image:
-        image.load()
         if image.size != (catalog["Width"], catalog["Height"]):
             raise ValueError(f"Publisher dimensions changed to {image.size}; inspect and update the manifest.")
+        image.load()
         out = io.BytesIO()
         if suffix == ".jpg":
             image.convert("RGB").save(out, format="JPEG", quality=95)

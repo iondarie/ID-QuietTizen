@@ -8,10 +8,10 @@ D=/opt/usr/share/quiet-tizen-backups/$name
 umask 077
 test ! -e "$D" || { echo 'Snapshot already exists; never overwrite the original.' >&2; exit 1; }
 mkdir -p "$D"
-for name in .pkgmgr_parser .app-context .webappservice; do
-    test -f "/opt/dbspace/$name.db"
-    sqlite3 -readonly "/opt/dbspace/$name.db" ".backup '$D/$name.db'"
-    test "$(sqlite3 -readonly "$D/$name.db" 'PRAGMA quick_check;')" = ok
+for base in .pkgmgr_parser .app-context .webappservice; do
+    test -f "/opt/dbspace/$base.db"
+    sqlite3 -readonly "/opt/dbspace/$base.db" ".backup '$D/$base.db'"
+    test "$(sqlite3 -readonly "$D/$base.db" 'PRAGMA quick_check;')" = ok
 done
 for key in db/appfw/home_appid db/appfw/startup_appid \
     db/was/preload_by_country db/menu/autorun_tv_plus \

@@ -13,8 +13,8 @@ public static class Probe {
    if(args.Length==2 && args[0]=="set-home") {int s=app_operation_set_current_app("http://tizen.org/appcontrol/operation/main",args[1]); Console.WriteLine("set_home="+s);return s==0?0:1;}
    if(args.Length==1 && args[0]=="state") {int v,m;int vr=sound_manager_get_master_volume(out v),mr=sound_manager_get_master_mute(out m);Console.WriteLine("volume="+v+" volume_result="+vr+" mute="+m+" mute_result="+mr);return vr==0&&mr==0?0:1;}
    IntPtr p;int r=app_operation_get_current_app("http://tizen.org/appcontrol/operation/main",out p);
-   Console.WriteLine("home_result="+r+" home="+(p==IntPtr.Zero?"null":Marshal.PtrToStringAnsi(p)));if(p!=IntPtr.Zero)free(p);
-   p=get_source_list();Console.WriteLine("sources="+(p==IntPtr.Zero?"null":Marshal.PtrToStringAnsi(p)));
+   Console.WriteLine("home_result="+r+" home="+(p==IntPtr.Zero?"null":Marshal.PtrToStringUTF8(p)));if(p!=IntPtr.Zero)free(p);
+   p=get_source_list();Console.WriteLine("sources="+(p==IntPtr.Zero?"null":Marshal.PtrToStringUTF8(p)));
    int source; r=vconf_get_int("memory/system/source_type",out source);Console.WriteLine("current_source_result="+r+" current_source="+source);
    return 0;
   } catch(Exception e) {Console.WriteLine(e);return 1;}

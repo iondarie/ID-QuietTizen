@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Build locally; never redistribute Samsung reference assemblies."""
+"""Build locally; never redistribute Samsung reference assemblies.
+
+The qn85d launcher (AdPlayer) is built separately; see docs/qn85d.md and
+tools/package_qn85d.py.
+"""
 import argparse
 import os
 from pathlib import Path

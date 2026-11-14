@@ -9,6 +9,7 @@ import json
 import re
 import secrets
 import subprocess
+import sys
 import tarfile
 import tempfile
 from dataclasses import dataclass
@@ -264,6 +265,7 @@ async def probe(
             raise ArchiveRootError(f"missing payload {payloads / name}")
     package = "archive-root-" + secrets.token_hex(8)
     staging_started = False
+    evidence: dict[str, object] | None = None
     launch_task: asyncio.Task[CaptureResult] | None = None
     server = RootAgentServer(bind, 0, tv_host, generate_secret(), require_root=True)
     await server.start()
@@ -351,6 +353,7 @@ async def probe(
                     )
             return evidence
     finally:
+        active_error = sys.exc_info()[0] is not None
         await server.close()
         if launch_task is not None and not launch_task.done():
             try:
@@ -363,8 +366,14 @@ async def probe(
                 cleaned = await asyncio.to_thread(_cleanup, client, package)
             except (ArchiveRootError, SdbError):
                 pass
-        final_hashes = await asyncio.to_thread(_capture, client, SYSTEM_HASH_COMMAND)
-        if "evidence" in locals():
+        try:
+            final_hashes = await asyncio.to_thread(_capture, client, SYSTEM_HASH_COMMAND)
+        except Exception:
+            # Never mask an in-flight failure with a follow-up capture error.
+            if not active_error:
+                raise
+            final_hashes = None
+        if evidence is not None and final_hashes is not None:
             evidence["system_files_unchanged"] = (
                 final_hashes == assessment.original_hashes
             )

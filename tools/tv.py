@@ -67,7 +67,7 @@ test "$(stat -c %s {shlex.quote(remote)})" -le 33554432
 t=$(mktemp /run/quiet-tizen-pull.XXXXXX)
 trap 'rm -f "$t"' EXIT HUP INT TERM
 gzip -c {shlex.quote(remote)} > "$t"
-test "$(wc -c < "$t")" -le 760000 || {{ echo 'File too large; split a snapshot into smaller files first.' >&2; exit 1; }}
+test "$(wc -c < "$t")" -le 760000 || {{ echo 'File too large (compressed stream exceeds the command-channel limit); split a snapshot into smaller files first.' >&2; exit 1; }}
 sha256sum {shlex.quote(remote)} | cut -d ' ' -f 1
 base64 "$t"
 """

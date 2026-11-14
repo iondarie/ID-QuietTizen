@@ -44,7 +44,7 @@ public sealed class QuietHome : NUIApplication {
   favorites.Apps=(favorites.Apps??new()).Distinct().ToList();favorites.Channels=(favorites.Channels??new()).Distinct().ToList();try{if(File.Exists(dataDir+"catalog-cache.json")){var cached=JsonSerializer.Deserialize<Catalog>(File.ReadAllText(dataDir+"catalog-cache.json"));if(cached?.Apps?.Count>0)catalog.Apps=cached.Apps;if(cached?.Channels?.Count>0)catalog.Channels=cached.Channels;}}catch{}catalog.Apps=catalog.Apps.Where(a=>IsCatalogApp(a.Id)).ToList();UpdateAppChoices();try{tv=new TvServices();}catch{}
   try{if(File.Exists(dataDir+"weather.json"))reading=JsonSerializer.Deserialize<WeatherReading>(File.ReadAllText(dataDir+"weather.json"));}catch{}
   artParking=new View{Opacity=0,Size2D=new Size2D(1920,1080)};Window.Default.Add(artParking);
-  logoStore=new LogoStore(Root+"logo-sources.json",dataDir+"channel-art");foreach(var channel in catalog.Channels){if(string.IsNullOrWhiteSpace(channel.Asset)||!File.Exists(PathFor(channel.Asset)))channel.Asset=logoStore.Cached(channel.Name)??"";}RefreshSource();Build();RefreshFavoriteArtwork();tick=new Tizen.NUI.Timer(1000);tick.Tick+=(s,e)=>{if(refreshSourceAfterResume){refreshSourceAfterResume=false;RefreshSource();WriteState("source_refreshed");}while(ui.TryDequeue(out var action)){try{action();}catch(Exception ex){Notice(ex.Message);}}UpdateHeader();if(active&&DateTime.UtcNow>=nextWeather&&!weatherBusy)RefreshWeather();return true;};tick.Start();RefreshApps();RefreshWeather();WriteState("created");
+  logoStore=new LogoStore(Root+"logo-sources.json",dataDir+"channel-art");foreach(var channel in catalog.Channels){if(string.IsNullOrWhiteSpace(channel.Asset)||!File.Exists(PathFor(channel.Asset)))channel.Asset=logoStore.Cached(channel.Name)??"";}RefreshSource();Build();_ = RefreshFavoriteArtwork();tick=new Tizen.NUI.Timer(1000);tick.Tick+=(s,e)=>{if(refreshSourceAfterResume){refreshSourceAfterResume=false;RefreshSource();WriteState("source_refreshed");}while(ui.TryDequeue(out var action)){try{action();}catch(Exception ex){Notice(ex.Message);}}UpdateHeader();if(active&&DateTime.UtcNow>=nextWeather&&!weatherBusy)_ = RefreshWeather();return true;};tick.Start();_ = RefreshApps();_ = RefreshWeather();WriteState("created");
  }
  protected override void OnPause(){SourceOverlay.Release();base.OnPause();active=false;tick?.Stop();WriteState("paused");}
  protected override void OnResume(){base.OnResume();SourceOverlay.Apply();active=true;refreshSourceAfterResume=true;tick?.Start();RefreshSource();if(time!=null)UpdateHeader();WriteState("resumed");}
@@ -276,7 +276,7 @@ public sealed class QuietHome : NUIApplication {
    else if(key=="Right"||IsSelect(key)){
     int target=tabFocus;
     if(target==2){if(IsSelect(key))Setting("advanced");}
-    else if(IsSelect(key)&&target==1){Go(1);RefreshApps();}
+    else if(IsSelect(key)&&target==1){Go(1);_ = RefreshApps();}
     else{
      tabFocus=-1;
      selected=tiles.FindIndex(t=>t.Rail==target+1&&TileVisible(t));
@@ -286,7 +286,7 @@ public sealed class QuietHome : NUIApplication {
    }
    return;
   }
-  if(tabFocus>=0){if(key=="Left"||key=="Right"){int target=Math.Clamp(tabFocus+(key=="Left"?-1:1),0,2);if(target==2){Setting("advanced");return;}tabFocus=target;page=tabFocus;selected=0;pickerPage=0;Build();if(page==1)RefreshApps();}else if(key=="Down"||IsSelect(key)){tabFocus=-1;Build();}return;}
+  if(tabFocus>=0){if(key=="Left"||key=="Right"){int target=Math.Clamp(tabFocus+(key=="Left"?-1:1),0,2);if(target==2){Setting("advanced");return;}tabFocus=target;page=tabFocus;selected=0;pickerPage=0;Build();if(page==1)_ = RefreshApps();}else if(key=="Down"||IsSelect(key)){tabFocus=-1;Build();}return;}
   if(IsSelect(key)){if(tiles.Count>0)Activate(tiles[selected].Action);return;}
   if(!new[]{"Left","Right","Up","Down"}.Contains(key)||tiles.Count==0)return;
   if(HandleHomeVertical(key)||HandleHomeHorizontal(key))return;var current=tiles[selected];bool horizontal=key=="Left"||key=="Right";int sign=key=="Left"||key=="Up"?-1:1;double cx=current.X+current.W/2d,cy=current.Y+current.H/2d;
@@ -297,16 +297,16 @@ public sealed class QuietHome : NUIApplication {
  void Go(int p){pickerFromHome=false;page=p;selected=0;pickerPage=0;tabFocus=-1;editing="";Build();}
  void Activate(string action){if(action.StartsWith("app:")){Launch(action[4..]);return;}if(action.StartsWith("source:")){int n=int.Parse(action[7..]);int result=connect_source(n);if(result<0)throw new InvalidOperationException("HDMI switch failed");lastSource=n;lastSourceLabel="Apple TV";Launch("org.tizen.tv-viewer");return;}
   if(action.StartsWith("channel:")){if(tv==null)throw new InvalidOperationException("Channel API unavailable");string id=action[8..];connect_source(0);if(!tv.Tune(id))throw new InvalidOperationException("Channel tune request failed");lastSource=0;lastSourceLabel=catalog.Channels.Find(c=>c.Id==id)?.Name??"Live TV";Launch("org.tizen.tv-viewer");return;}
-  if(action.StartsWith("manage:")){Go(action.EndsWith("apps")?3:4);RefreshFavoriteArtwork();return;}if(action.StartsWith("picker:")){bool fromHome=page==0;Go(action.EndsWith("apps")?5:6);pickerFromHome=fromHome;if(page==5)RefreshApps();else RefreshChannels();return;}
+  if(action.StartsWith("manage:")){Go(action.EndsWith("apps")?3:4);_ = RefreshFavoriteArtwork();return;}if(action.StartsWith("picker:")){bool fromHome=page==0;Go(action.EndsWith("apps")?5:6);pickerFromHome=fromHome;if(page==5)_ = RefreshApps();else RefreshChannels();return;}
   if(action.StartsWith("edit:")){selectedKind=page==3?"apps":"channels";selectedId=action[5..];Go(7);return;}
   if(action.StartsWith("move:")){var list=selectedKind=="apps"?favorites.Apps:favorites.Channels;int old=list.IndexOf(selectedId),next=Math.Clamp(old+int.Parse(action[5..]),0,list.Count-1);if(old>=0){list.RemoveAt(old);list.Insert(next,selectedId);SaveFavorites();Build();Notice("Order saved");}return;}
   if(action=="remove"){(selectedKind=="apps"?favorites.Apps:favorites.Channels).Remove(selectedId);SaveFavorites();Go(selectedKind=="apps"?3:4);return;}
-  if(action.StartsWith("toggle:")){var list=page==5?favorites.Apps:favorites.Channels;string id=action[7..];if(list.Contains(id))list.Remove(id);else{if(list.Count>=15)throw new InvalidOperationException("Maximum 15 favorites");list.Add(id);}SaveFavorites();Build();RefreshFavoriteArtwork();return;}
+  if(action.StartsWith("toggle:")){var list=page==5?favorites.Apps:favorites.Channels;string id=action[7..];if(list.Contains(id))list.Remove(id);else{if(list.Count>=15)throw new InvalidOperationException("Maximum 15 favorites");list.Add(id);}SaveFavorites();Build();_ = RefreshFavoriteArtwork();return;}
   if(action.StartsWith("track:")){int i=int.Parse(action[6..]);bool ok=isSubtitle?tv.SetSubtitle(i):tv.SetAudio(i);if(!ok)throw new InvalidOperationException("Track change failed. Use Advanced settings.");Notice("Track change requested");return;}
   if(action.StartsWith("setting:"))Setting(action[8..]);
  }
  void Setting(string name){if(name=="advanced"){Launch("org.tizen.menu");return;}if(name=="network"){Launch("org.tizen.menu","networksettings");return;}if(name=="controllers"){Launch("org.tizen.menu","add-bluetooth-keyboard");return;}if(name=="favorites"){Go(3);return;}if(name=="favorite-channels"){Go(4);return;}
-  if(name=="weather"){RefreshWeather(true);Notice("Otopeni · Updates every 30 min · Last successful reading stays available offline · Weather by Open-Meteo");return;}
+  if(name=="weather"){_ = RefreshWeather(true);Notice("Otopeni · Updates every 30 min · Last successful reading stays available offline · Weather by Open-Meteo");return;}
   if(name=="subtitles"||name=="audio"){RefreshSource();isSubtitle=name=="subtitles";tracks=new();try{if(tv!=null&&lastSource==0)tracks=isSubtitle?tv.SubtitleTracks():tv.AudioTracks();}catch{}Go(8);return;}
   if(name=="mute"){if(sound_manager_get_master_mute(out var m)!=0||sound_manager_set_master_mute(m==1?0:1)!=0)throw new InvalidOperationException("Use the remote mute button");Notice(m==1?"Sound on":"Muted");return;}
   if(name=="volume"||name=="brightness"){editing=name;Notice("Left / Right to adjust "+name+" · Select or Back to finish");return;}
@@ -338,12 +338,12 @@ public sealed class QuietHome : NUIApplication {
   }
   appChoices=catalog.Apps.Where(a=>HasArtwork(a.Asset)).OrderBy(a=>a.Name,StringComparer.OrdinalIgnoreCase).ToList();
  }
- async void RefreshApps(){
+ async Task RefreshApps(){
   if(appsRefreshing)return;
   appsRefreshing=true;
   var previous=catalog.Apps.ToDictionary(a=>a.Id,StringComparer.Ordinal);
   try{
-   var infos=await ApplicationManager.GetInstalledApplicationsAsync();
+   var infos=await ApplicationManager.GetInstalledApplicationsAsync().ConfigureAwait(false);
    var items=new List<AppEntry>();
    foreach(var info in infos){
     try{
@@ -373,7 +373,7 @@ public sealed class QuietHome : NUIApplication {
  }
  void RefreshChannels(){try{var channels=tv?.Channels();if(channels?.Count>0){foreach(var channel in channels){var known=catalog.Channels.Find(c=>c.Id==channel.Id||c.Name==channel.Name);if(known!=null){channel.Asset=known.Asset;channel.Background=known.Background;}}catalog.Channels=channels;AtomicJson(dataDir+"catalog-cache.json",catalog);if(page==6)Build();}}catch{Notice("Using the saved channel catalog");}}
 
- async void RefreshFavoriteArtwork(){if(logoStore==null)return;if(artworkBusy){artworkRefreshPending=true;return;}artworkBusy=true;var wanted=catalog.Channels.Where(c=>favorites.Channels.Contains(c.Id)&&(string.IsNullOrWhiteSpace(c.Asset)||!File.Exists(PathFor(c.Asset)))).Select(c=>(c.Id,c.Name)).ToArray();try{foreach(var channel in wanted){string path=await logoStore.GetChannelAsync(channel.Name).ConfigureAwait(false);if(path==null)continue;ui.Enqueue(()=>{var entry=catalog.Channels.Find(c=>c.Id==channel.Id);if(entry==null)return;entry.Asset=path;AtomicJson(dataDir+"catalog-cache.json",catalog);if(page==0||page==4)Build();});}}catch{}finally{ui.Enqueue(()=>{artworkBusy=false;if(artworkRefreshPending){artworkRefreshPending=false;RefreshFavoriteArtwork();}});}}
+ async Task RefreshFavoriteArtwork(){if(logoStore==null)return;if(artworkBusy){artworkRefreshPending=true;return;}artworkBusy=true;var wanted=catalog.Channels.Where(c=>favorites.Channels.Contains(c.Id)&&(string.IsNullOrWhiteSpace(c.Asset)||!File.Exists(PathFor(c.Asset)))).Select(c=>(c.Id,c.Name)).ToArray();try{foreach(var channel in wanted){string path=await logoStore.GetChannelAsync(channel.Name).ConfigureAwait(false);if(path==null)continue;ui.Enqueue(()=>{var entry=catalog.Channels.Find(c=>c.Id==channel.Id);if(entry==null)return;entry.Asset=path;AtomicJson(dataDir+"catalog-cache.json",catalog);if(page==0||page==4)Build();});}}catch{}finally{ui.Enqueue(()=>{artworkBusy=false;if(artworkRefreshPending){artworkRefreshPending=false;_ = RefreshFavoriteArtwork();}});}}
  void SaveFavorites(){if(!prefsValid)throw new InvalidOperationException("Existing preferences need recovery before saving");AtomicJson(dataDir+"favorites.json",favorites);}
  static void AtomicJson<T>(string path,T value){string temp=path+".new";File.WriteAllText(temp,JsonSerializer.Serialize(value,new JsonSerializerOptions{WriteIndented=true}));File.Move(temp,path,true);}
  void RefreshSource(){try{if(vconf_get_int("memory/system/source_type",out int n)==0)lastSource=n;lastSourceLabel=ForegroundAppName()??(lastSource==catalog.AppleSource?"Apple TV":lastSource==0?(tv?.CurrentChannel()??"Live TV"):"HDMI");}catch{lastSourceLabel=lastSource==catalog.AppleSource?"Apple TV":"Live TV";}}
@@ -419,7 +419,7 @@ public sealed class QuietHome : NUIApplication {
  void UpdateHeader(){if(time==null)return;var now=DateTime.Now;time.Text=now.ToString("HH:mm",CultureInfo.InvariantCulture);date.Text=now.ToString("ddd, d MMM",CultureInfo.GetCultureInfo("en-GB"));source.Text=lastSourceLabel;if(page==0)source.PixelSize=lastSourceLabel.Length>24?18:lastSourceLabel.Length>17?21:27;weather.Text=reading==null?"—":Math.Round(reading.Temperature)+"°  "+WeatherName(reading.Code);weatherPlace.Text="Otopeni"+(reading==null?" · Waiting":weatherError!=""?" · Saved "+Age(reading.UpdatedUtc):"");}
  static string Age(DateTime date){var age=DateTime.UtcNow-date;return age.TotalHours>=1?((int)age.TotalHours)+"h ago":Math.Max(0,(int)age.TotalMinutes)+"m ago";}
  static string WeatherName(int code)=>code==0?"Clear":code<=3?"Cloudy":code<=48?"Fog":code<=67?"Rain":code<=77?"Snow":code<=82?"Showers":code<=86?"Snow":"Storm";
- async void RefreshWeather(bool force=false){if(weatherBusy||(!force&&DateTime.UtcNow<nextWeather))return;weatherBusy=true;nextWeather=DateTime.UtcNow.AddMinutes(30);try{using var http=new HttpClient{Timeout=TimeSpan.FromSeconds(8)};var text=await http.GetStringAsync("https://api.open-meteo.com/v1/forecast?latitude=44.55&longitude=26.06667&current=temperature_2m,weather_code&timezone=Europe%2FBucharest").ConfigureAwait(false);using var doc=JsonDocument.Parse(text);var current=doc.RootElement.GetProperty("current");double temperature=current.GetProperty("temperature_2m").GetDouble();int code=current.GetProperty("weather_code").GetInt32();if(!double.IsFinite(temperature)||temperature< -60||temperature>65)throw new InvalidDataException();var updated=new WeatherReading{Temperature=temperature,Code=code,UpdatedUtc=DateTime.UtcNow};AtomicJson(dataDir+"weather.json",updated);ui.Enqueue(()=>{reading=updated;weatherError="";UpdateHeader();});}catch{ui.Enqueue(()=>{weatherError="offline";UpdateHeader();});}finally{weatherBusy=false;}}
+ async Task RefreshWeather(bool force=false){if(weatherBusy||(!force&&DateTime.UtcNow<nextWeather))return;weatherBusy=true;nextWeather=DateTime.UtcNow.AddMinutes(30);try{using var http=new HttpClient{Timeout=TimeSpan.FromSeconds(8)};var text=await http.GetStringAsync("https://api.open-meteo.com/v1/forecast?latitude=44.55&longitude=26.06667&current=temperature_2m,weather_code&timezone=Europe%2FBucharest").ConfigureAwait(false);using var doc=JsonDocument.Parse(text);var current=doc.RootElement.GetProperty("current");double temperature=current.GetProperty("temperature_2m").GetDouble();int code=current.GetProperty("weather_code").GetInt32();if(!double.IsFinite(temperature)||temperature< -60||temperature>65)throw new InvalidDataException();var updated=new WeatherReading{Temperature=temperature,Code=code,UpdatedUtc=DateTime.UtcNow};AtomicJson(dataDir+"weather.json",updated);ui.Enqueue(()=>{reading=updated;weatherError="";UpdateHeader();});}catch{ui.Enqueue(()=>{weatherError="offline";UpdateHeader();});}finally{weatherBusy=false;}}
  void Notice(string message){if(status!=null)status.Text=message;}
  void WriteState(string activity){try{File.WriteAllText(StateFile,DateTime.UtcNow.ToString("o")+"\nactivity="+activity+"\npage="+page+"\nselected="+selected+"\nselected_name="+(tiles.Count>selected?tiles[selected].Name:"")+"\nchannel_scroll="+(channelRail?.Scroll??0)+"\napp_scroll="+(appRail?.Scroll??0)+"\nsource="+lastSource+"\nsource_name="+lastSourceLabel+"\napps_with_icons="+appChoices.Count+"\napp_names="+string.Join(", ",appChoices.Select(a=>a.Name))+"\nfavorite_apps="+(favorites?.Apps.Count??0)+"\nfavorite_channels="+(favorites?.Channels.Count??0)+"\nweather="+(reading==null?"none":reading.Temperature.ToString(CultureInfo.InvariantCulture))+"\nweather_error="+weatherError+"\nsource_overlay="+SourceOverlay.Status+"\nprocess_id="+System.Diagnostics.Process.GetCurrentProcess().Id+"\n");}catch{}}
  public static void Main(string[] args){using var app=new QuietHome();app.Run(args);}

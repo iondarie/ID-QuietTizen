@@ -44,6 +44,9 @@ class PackageTests(unittest.TestCase):
             b'<svg><image href="https://example.com/image.png"/></svg>',
             b'<svg onload="alert(1)"/>',
             b'<!DOCTYPE svg [<!ENTITY x "x">]><svg/>',
+            b'<svg><style>@import "https://example.com/x.css";</style></svg>',
+            b'<svg><style>.a{fill:red}</style></svg>',
+            b'<svg><image href="data:image/svg+xml;base64,AA"/></svg>',
         ]:
             with self.assertRaises(ValueError):
                 convert(data, entry)
