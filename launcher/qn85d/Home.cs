@@ -21,7 +21,7 @@ public sealed class QuietHome : NUIApplication {
  readonly List<Tile> tiles=new();readonly List<View> views=new();readonly ConcurrentQueue<Action> ui=new();
  readonly Dictionary<string,ImageView> art=new(); readonly Dictionary<string,View> artParent=new(); View artParking;
  Animation focusAnimation,railAnimation;FavoriteRail channelRail,appRail;View channelContent,appContent;
- TextLabel time,date,weather,weatherPlace,source,status;Tizen.NUI.Timer tick;int page,selected,pickerPage,tabFocus=-1;string selectedId="",selectedKind="",editing="",lastKey="",lastSourceLabel="Apple TV";long lastKeyAt;int lastSource=0;bool weatherBusy;WeatherReading reading;DateTime nextWeather;string weatherError="";List<(int Index,string Name)> tracks=new();bool isSubtitle;
+ TextLabel time,date,weather,weatherPlace,source,status;Tizen.NUI.Timer tick;int page,selected,pickerPage,tabFocus=-1;string selectedId="",selectedKind="",editing="",lastKey="",lastSourceLabel="Apple TV";long lastKeyAt;int lastSource=0;bool refreshSourceAfterResume;bool weatherBusy;WeatherReading reading;DateTime nextWeather;string weatherError="";List<(int Index,string Name)> tracks=new();bool isSubtitle;
  [DllImport("libsource-api.so")] static extern int connect_source(int sourceType);
  [DllImport("libvconf.so.0")] static extern int vconf_get_int(string key,out int value);
  [DllImport("libcapi-media-sound-manager-tv.so.0")]static extern int sound_manager_get_master_volume(out int value);
@@ -44,10 +44,10 @@ public sealed class QuietHome : NUIApplication {
   favorites.Apps=(favorites.Apps??new()).Distinct().ToList();favorites.Channels=(favorites.Channels??new()).Distinct().ToList();try{if(File.Exists(dataDir+"catalog-cache.json")){var cached=JsonSerializer.Deserialize<Catalog>(File.ReadAllText(dataDir+"catalog-cache.json"));if(cached?.Apps?.Count>0)catalog.Apps=cached.Apps;if(cached?.Channels?.Count>0)catalog.Channels=cached.Channels;}}catch{}catalog.Apps=catalog.Apps.Where(a=>IsCatalogApp(a.Id)).ToList();UpdateAppChoices();try{tv=new TvServices();}catch{}
   try{if(File.Exists(dataDir+"weather.json"))reading=JsonSerializer.Deserialize<WeatherReading>(File.ReadAllText(dataDir+"weather.json"));}catch{}
   artParking=new View{Opacity=0,Size2D=new Size2D(1920,1080)};Window.Default.Add(artParking);
-  logoStore=new LogoStore(Root+"logo-sources.json",dataDir+"channel-art");foreach(var channel in catalog.Channels){if(string.IsNullOrWhiteSpace(channel.Asset)||!File.Exists(PathFor(channel.Asset)))channel.Asset=logoStore.Cached(channel.Name)??"";}RefreshSource();Build();RefreshFavoriteArtwork();tick=new Tizen.NUI.Timer(1000);tick.Tick+=(s,e)=>{while(ui.TryDequeue(out var action)){try{action();}catch(Exception ex){Notice(ex.Message);}}UpdateHeader();if(active&&DateTime.UtcNow>=nextWeather&&!weatherBusy)RefreshWeather();return true;};tick.Start();RefreshApps();RefreshWeather();WriteState("created");
+  logoStore=new LogoStore(Root+"logo-sources.json",dataDir+"channel-art");foreach(var channel in catalog.Channels){if(string.IsNullOrWhiteSpace(channel.Asset)||!File.Exists(PathFor(channel.Asset)))channel.Asset=logoStore.Cached(channel.Name)??"";}RefreshSource();Build();RefreshFavoriteArtwork();tick=new Tizen.NUI.Timer(1000);tick.Tick+=(s,e)=>{if(refreshSourceAfterResume){refreshSourceAfterResume=false;RefreshSource();WriteState("source_refreshed");}while(ui.TryDequeue(out var action)){try{action();}catch(Exception ex){Notice(ex.Message);}}UpdateHeader();if(active&&DateTime.UtcNow>=nextWeather&&!weatherBusy)RefreshWeather();return true;};tick.Start();RefreshApps();RefreshWeather();WriteState("created");
  }
  protected override void OnPause(){SourceOverlay.Release();base.OnPause();active=false;tick?.Stop();WriteState("paused");}
- protected override void OnResume(){base.OnResume();SourceOverlay.Apply();active=true;tick?.Start();RefreshSource();if(time!=null)UpdateHeader();WriteState("resumed");}
+ protected override void OnResume(){base.OnResume();SourceOverlay.Apply();active=true;refreshSourceAfterResume=true;tick?.Start();RefreshSource();if(time!=null)UpdateHeader();WriteState("resumed");}
  protected override void OnAppControlReceived(AppControlReceivedEventArgs e){base.OnAppControlReceived(e);string type;if(e.ReceivedAppControl.ExtraData.TryGet("launch_type",out type)&&type=="preload"){Exit();return;}string target;page=e.ReceivedAppControl.ExtraData.TryGet("quiet_page",out target)&&target=="settings"?2:0;selected=0;tabFocus=-1;if(catalog!=null){RefreshSource();Build();}}
  View Add(View v){views.Add(v);Window.Default.Add(v);return v;}
  TextLabel Label(string text,int x,int y,int w,int h,float size,Color color){return new TextLabel{Text=text,Position2D=new Position2D(x,y),Size2D=new Size2D(w,h),PixelSize=size,FontFamily="Quiet Inter Medium",TextColor=color,VerticalAlignment=VerticalAlignment.Center};}
@@ -262,7 +262,7 @@ public sealed class QuietHome : NUIApplication {
  void OnKey(object sender,Window.KeyEventArgs e){if(e.Key==null||e.Key.State!=Key.StateType.Down)return;string key=e.Key.KeyPressedName;long now=Environment.TickCount64;if(key==lastKey&&now-lastKeyAt<150)return;lastKey=key;lastKeyAt=now;try{
   if(key=="XF86Home"){Go(0);return;}if(key=="XF86More"||key=="XF86SysMenu"){Setting("advanced");return;}
   if(editing!=""){if(key=="Left"||key=="Right")Adjust(editing,key=="Left"?-1:1);else if(IsBack(key)||IsSelect(key)){editing="";Build();}return;}
-  if(IsBack(key)){if(page==0){Launch("org.tizen.tv-viewer");}else if(page==7)Go(selectedKind=="apps"?3:4);else if(page==5||page==6){
+  if(IsBack(key)){if(page==0){ReturnToSource();}else if(page==7)Go(selectedKind=="apps"?3:4);else if(page==5||page==6){
    if(!pickerFromHome)Go(page==5?3:4);
    else{
     string addAction=page==5?"picker:apps":"picker:channels";
@@ -376,7 +376,46 @@ public sealed class QuietHome : NUIApplication {
  async void RefreshFavoriteArtwork(){if(logoStore==null)return;if(artworkBusy){artworkRefreshPending=true;return;}artworkBusy=true;var wanted=catalog.Channels.Where(c=>favorites.Channels.Contains(c.Id)&&(string.IsNullOrWhiteSpace(c.Asset)||!File.Exists(PathFor(c.Asset)))).Select(c=>(c.Id,c.Name)).ToArray();try{foreach(var channel in wanted){string path=await logoStore.GetChannelAsync(channel.Name).ConfigureAwait(false);if(path==null)continue;ui.Enqueue(()=>{var entry=catalog.Channels.Find(c=>c.Id==channel.Id);if(entry==null)return;entry.Asset=path;AtomicJson(dataDir+"catalog-cache.json",catalog);if(page==0||page==4)Build();});}}catch{}finally{ui.Enqueue(()=>{artworkBusy=false;if(artworkRefreshPending){artworkRefreshPending=false;RefreshFavoriteArtwork();}});}}
  void SaveFavorites(){if(!prefsValid)throw new InvalidOperationException("Existing preferences need recovery before saving");AtomicJson(dataDir+"favorites.json",favorites);}
  static void AtomicJson<T>(string path,T value){string temp=path+".new";File.WriteAllText(temp,JsonSerializer.Serialize(value,new JsonSerializerOptions{WriteIndented=true}));File.Move(temp,path,true);}
- void RefreshSource(){try{if(vconf_get_int("memory/system/source_type",out int n)==0)lastSource=n;lastSourceLabel=lastSource==catalog.AppleSource?"Apple TV":lastSource==0?(tv?.CurrentChannel()??"Live TV"):"HDMI";}catch{lastSourceLabel=lastSource==catalog.AppleSource?"Apple TV":"Live TV";}}
+ void RefreshSource(){try{if(vconf_get_int("memory/system/source_type",out int n)==0)lastSource=n;lastSourceLabel=ForegroundAppName()??(lastSource==catalog.AppleSource?"Apple TV":lastSource==0?(tv?.CurrentChannel()??"Live TV"):"HDMI");}catch{lastSourceLabel=lastSource==catalog.AppleSource?"Apple TV":"Live TV";}}
+ // The compositor lists the foreground windows first. The HDMI setting alone
+ // cannot identify a streaming app displayed immediately below Quiet Home.
+ [DllImport("libcapi-appfw-app-manager.so.0")]
+ static extern int app_manager_get_app_id(int pid,out IntPtr appId);
+ [DllImport("libc.so.6")] static extern void free(IntPtr memory);
+ [DllImport("libaul.so.0")] static extern int aul_resume_app(string appId);
+ string foregroundAppId;
+ void ReturnToSource(){
+  if(foregroundAppId!=null&&aul_resume_app(foregroundAppId)>=0)return;
+  Window.Default.Lower();
+ }
+ string ForegroundAppName(){
+  foregroundAppId=null;
+  try{
+   using var stack=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("/usr/bin/aul_window","foreach_window_stack"){
+    UseShellExecute=false, RedirectStandardOutput=true
+   });
+   var read=stack.StandardOutput.ReadToEndAsync();
+   if(!stack.WaitForExit(350)){
+    stack.Kill();
+    return null;
+   }
+   if(stack.ExitCode!=0||!read.Wait(100))return null;
+   int pid=0;
+   foreach(string entry in read.Result.Split('\n')){
+    string line=entry.Trim();
+    if(line.StartsWith("- Process ID:"))int.TryParse(line[13..].Trim(),out pid);
+    if(line!="- Visibility: 0"||pid<=0||pid==Environment.ProcessId)continue;
+    if(app_manager_get_app_id(pid,out var idPointer)!=0||idPointer==IntPtr.Zero)return null;
+    string id;
+    try{id=Marshal.PtrToStringUTF8(idPointer);}
+    finally{free(idPointer);}
+    var app=catalog.Apps.Find(candidate=>candidate.Id==id);
+    foregroundAppId=app?.Id;
+    return app?.Name;
+   }
+  }catch(Exception){ /* Source detection falls back to the tuner or HDMI. */ }
+  return null;
+ }
  void UpdateHeader(){if(time==null)return;var now=DateTime.Now;time.Text=now.ToString("HH:mm",CultureInfo.InvariantCulture);date.Text=now.ToString("ddd, d MMM",CultureInfo.GetCultureInfo("en-GB"));source.Text=lastSourceLabel;if(page==0)source.PixelSize=lastSourceLabel.Length>24?18:lastSourceLabel.Length>17?21:27;weather.Text=reading==null?"—":Math.Round(reading.Temperature)+"°  "+WeatherName(reading.Code);weatherPlace.Text="Otopeni"+(reading==null?" · Waiting":weatherError!=""?" · Saved "+Age(reading.UpdatedUtc):"");}
  static string Age(DateTime date){var age=DateTime.UtcNow-date;return age.TotalHours>=1?((int)age.TotalHours)+"h ago":Math.Max(0,(int)age.TotalMinutes)+"m ago";}
  static string WeatherName(int code)=>code==0?"Clear":code<=3?"Cloudy":code<=48?"Fog":code<=67?"Rain":code<=77?"Snow":code<=82?"Showers":code<=86?"Snow":"Storm";

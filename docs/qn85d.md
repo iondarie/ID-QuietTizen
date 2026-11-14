@@ -63,6 +63,11 @@ Use **Edit favorites** in the picker to reorder them. The launcher keeps those
 choices, cached channel art and the last successful weather result in its data
 directory.
 
+When Quiet Home opens over Netflix, **Active source** shows **Netflix**.
+Press **Return** on the main screen to resume the running app. This was
+verified on the supported firmware by checking that the same Netflix process
+regained focus.
+
 Restore Home routing first using the captured inverse, or the documented
 `restore-qn85d-home-routing-v2.sh` if its checks match. Then run
 `restore-qn85d-carrier.sh` to restore the original assembly and native cache.
