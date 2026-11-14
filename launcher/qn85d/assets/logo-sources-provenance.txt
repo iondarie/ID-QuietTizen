@@ -1,0 +1,2 @@
+Channel logo index: https://iptv-org.github.io/api/logos.json
+Accessed 2026-10-24. Logos identify their respective broadcasters. Downloaded images are cached privately on the owner TV.

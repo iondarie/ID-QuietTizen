@@ -1,0 +1,69 @@
+{
+  "AppleSource": 15,
+  "Apps": [
+    {
+      "Id": "org.tizen.apple.apple-music",
+      "Name": "Apple Music",
+      "Asset": "icons/applemusic.svg",
+      "Background": "#542A3B"
+    },
+    {
+      "Id": "com.samsung.tv.store",
+      "Name": "Apps",
+      "Asset": "/opt/usr/apps/com.samsung.tv.store/shared/res/home_i_icon_apps.png",
+      "Background": "#30303D"
+    },
+    {
+      "Id": "5b8c3eb16b.BeamCTVDev",
+      "Name": "HBO / Max",
+      "Asset": "icons/hbo.svg",
+      "Background": "#343055"
+    },
+    {
+      "Id": "rTn6ClEurC.Jellyfin",
+      "Name": "Jellyfin",
+      "Asset": "icons/jellyfin.svg",
+      "Background": "#3D3357"
+    },
+    {
+      "Id": "org.tizen.netflix-app",
+      "Name": "Netflix",
+      "Asset": "icons/netflix.svg",
+      "Background": "#30252C"
+    },
+    {
+      "Id": "kIciSQlYEM.plex",
+      "Name": "Plex",
+      "Asset": "icons/plex.svg",
+      "Background": "#29292E"
+    },
+    {
+      "Id": "org.tizen.primevideo",
+      "Name": "Prime Video",
+      "Asset": "icons/primevideo.svg",
+      "Background": "#243F51"
+    },
+    {
+      "Id": "hgQnxRksVu.myTunerRadioSamsungTV",
+      "Name": "Radio by myTuner - FM Radio Stations for Free",
+      "Asset": "/opt/usr/apps/hgQnxRksVu/shared/res/hgQnxRksVu.myTunerRadioSamsungTV.png",
+      "Background": "#30303D"
+    },
+    {
+      "Id": "9Ur5IzDKqV.TizenYouTube",
+      "Name": "YouTube",
+      "Asset": "/opt/usr/apps/9Ur5IzDKqV/shared/res/9Ur5IzDKqV.TizenYouTube.png",
+      "Background": "#30303D"
+    }
+  ],
+  "Channels": [],
+  "FavoriteApps": [
+    "kIciSQlYEM.plex",
+    "5b8c3eb16b.BeamCTVDev",
+    "rTn6ClEurC.Jellyfin",
+    "org.tizen.primevideo",
+    "org.tizen.netflix-app",
+    "org.tizen.apple.apple-music"
+  ],
+  "FavoriteChannels": []
+}

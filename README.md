@@ -1,5 +1,7 @@
 # Quiet Tizen
 
+For the Samsung QN85D build, see [Quiet Home on QE65QN85DBTXXH](docs/qn85d.md).
+
 A practical, agent-readable guide to making a Samsung Tizen TV quieter and
 more useful as an HDMI display.
 
