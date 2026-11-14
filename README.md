@@ -10,9 +10,9 @@ U8000F)**. It includes **Quiet Home**, a native launcher with a colorful,
 English-language interface, lightweight settings, local app cards and a
 shortcut to native Bluetooth controller pairing.
 
-![Quiet Home layout illustration](docs/quiet-home-preview.svg)
+![Quiet Home preview on the Samsung QN85D](docs/quiet-home-qn85d.svg)
 
-*Layout illustration with the public text-only app cards. Input labels are configurable.*
+*Quiet Home preview for the QN85D, with a simulated TV background.*
 
 It also includes targeted cleanup profiles, source-build tools and rollback
 recipes. **It is a working case study with a reusable toolkit, not a universal
