@@ -65,6 +65,7 @@ public sealed class QuietHome : NUIApplication {
   "icons/primevideo.svg"=>"#245370",
   "icons/netflix.svg"=>"#53252E",
   "icons/applemusic.svg"=>"#15171D",
+  _ when IsAppleTvApp(app.Id,app.Name)=>"#485666",
   _ when app.Id=="9Ur5IzDKqV.TizenYouTube"=>"#502D34",
   "icons/appletv.svg"=>"#485666",
   _=>app.Background??"#485666"
@@ -315,7 +316,16 @@ public sealed class QuietHome : NUIApplication {
  void Adjust(string setting,int delta){if(setting=="volume"){if(sound_manager_get_master_volume(out int n)!=0||sound_manager_set_master_volume(Math.Clamp(n+delta,0,100))!=0)throw new InvalidOperationException("Use the remote volume buttons");Notice("Volume "+Math.Clamp(n+delta,0,100));}else{if(!CSharpGetItemEnable("brightness",out var enabled)||!enabled||!CSharpGetItemValue("brightness",out var _,out var value)||!int.TryParse(value,out int n))throw new InvalidOperationException("Brightness unavailable");if(!CSharpSetItemValue("brightness",Math.Clamp(n+delta,0,50).ToString()))throw new InvalidOperationException("Brightness update rejected");Notice("Brightness "+Math.Clamp(n+delta,0,50));}}
  void Launch(string id,string menu=null){IntPtr c;int r=app_control_create(out c);if(r!=0)throw new InvalidOperationException("Could not create app request");try{r=app_control_set_app_id(c,id);if(r==0)r=app_control_set_operation(c,"http://tizen.org/appcontrol/operation/default");if(r==0&&menu!=null)r=app_control_add_extra_data(c,"menuitem",menu);if(r==0&&menu!=null)r=app_control_add_extra_data(c,"launchoption","pressed");if(r==0)r=app_control_send_launch_request(c,IntPtr.Zero,IntPtr.Zero);if(r!=0)throw new InvalidOperationException("App launch failed: "+r);}finally{app_control_destroy(c);}WriteState("launch:"+id);}
 
- static bool IsCatalogApp(string id){
+ static bool IsAppleTvApp(string id,string name=null){
+  return string.Equals(name?.Trim(),"Apple TV",StringComparison.OrdinalIgnoreCase)
+   || (id?.Contains("apple",StringComparison.OrdinalIgnoreCase)==true
+    && id.Contains("tv",StringComparison.OrdinalIgnoreCase));
+ }
+ static bool IsCatalogApp(string id,string name=null){
+  // The Apple TV Store package uses a different package ID from the Apple TV
+  // HDMI source. Keep the installed app in the catalog based on its identity,
+  // rather than treating it as the input card.
+  if(IsAppleTvApp(id,name))return true;
   if(id is "com.samsung.tv.store" or "org.tizen.netflix-app" or "org.tizen.primevideo" or "org.tizen.apple.apple-music"
    or "9Ur5IzDKqV.TizenYouTube" or "5b8c3eb16b.BeamCTVDev" or "hgQnxRksVu.myTunerRadioSamsungTV"
    or "kIciSQlYEM.plex" or "rTn6ClEurC.Jellyfin")return true;
@@ -332,6 +342,7 @@ public sealed class QuietHome : NUIApplication {
  }
  void UpdateAppChoices(){
   foreach(var app in catalog.Apps){
+   if(IsAppleTvApp(app.Id,app.Name)){app.Name="Apple TV";if(HasArtwork("icons/appletv.svg"))app.Asset="icons/appletv.svg";}
    if(app.Id=="9Ur5IzDKqV.TizenYouTube"&&HasArtwork("icons/youtube-brand.png"))app.Asset="icons/youtube-brand.png";
    if(app.Id=="com.samsung.tv.store"){app.Name="Samsung Apps";if(HasArtwork("icons/samsung-apps.png"))app.Asset="icons/samsung-apps.png";}
    if(app.Id=="hgQnxRksVu.myTunerRadioSamsungTV"){app.Name="myTuner Radio";if(HasArtwork("icons/mytuner.png"))app.Asset="icons/mytuner.png";}
@@ -348,7 +359,7 @@ public sealed class QuietHome : NUIApplication {
    foreach(var info in infos){
     try{
      string id=info.ApplicationId;
-     if(info.IsNoDisplay||string.IsNullOrWhiteSpace(info.Label)||!IsCatalogApp(id))continue;
+     if(info.IsNoDisplay||string.IsNullOrWhiteSpace(info.Label)||!IsCatalogApp(id,info.Label))continue;
      previous.TryGetValue(id,out var known);
      string asset=known?.Asset;
      if(id=="9Ur5IzDKqV.TizenYouTube"&&HasArtwork("icons/youtube-brand.png"))asset="icons/youtube-brand.png";
