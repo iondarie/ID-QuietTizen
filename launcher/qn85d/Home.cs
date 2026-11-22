@@ -347,7 +347,12 @@ public sealed class QuietHome : NUIApplication {
    if(app.Id=="com.samsung.tv.store"){app.Name="Samsung Apps";if(HasArtwork("icons/samsung-apps.png"))app.Asset="icons/samsung-apps.png";}
    if(app.Id=="hgQnxRksVu.myTunerRadioSamsungTV"){app.Name="myTuner Radio";if(HasArtwork("icons/mytuner.png"))app.Asset="icons/mytuner.png";}
   }
-  appChoices=catalog.Apps.Where(a=>HasArtwork(a.Asset)).OrderBy(a=>a.Name,StringComparer.OrdinalIgnoreCase).ToList();
+  // Apple exposes more than one launch component on some sets. Present the
+  // installed Apple TV app once, preferring its primary component.
+  appChoices=catalog.Apps.Where(a=>HasArtwork(a.Asset))
+   .GroupBy(a=>IsAppleTvApp(a.Id,a.Name)?"apple-tv":a.Id,StringComparer.Ordinal)
+   .Select(g=>g.OrderBy(a=>a.Id.EndsWith("-dummy",StringComparison.OrdinalIgnoreCase)?1:0).First())
+   .OrderBy(a=>a.Name,StringComparer.OrdinalIgnoreCase).ToList();
  }
  async Task RefreshApps(){
   if(appsRefreshing)return;
